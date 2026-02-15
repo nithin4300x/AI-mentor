@@ -1,0 +1,427 @@
+# Implementation Plan: AI Mentor
+
+## Overview
+
+This implementation plan breaks down the AI Mentor system into incremental coding tasks. The approach follows a bottom-up strategy: starting with core infrastructure (authentication, database), then building individual services (chat, debug, notes, flashcards, roadmap), and finally integrating everything with the frontend UI. Each task builds on previous work to ensure no orphaned code.
+
+## Tasks
+
+- [ ] 1. Set up project structure and core infrastructure
+  - Create monorepo structure with frontend (React) and backend (Node.js) directories
+  - Initialize package.json files with dependencies (Express, React, TypeScript, Jest, fast-check)
+  - Set up TypeScript configuration for both frontend and backend
+  - Configure ESLint and Prettier for code quality
+  - Set up testing framework (Jest) and property-based testing library (fast-check)
+  - Create environment configuration files for API keys and database connections
+  - _Requirements: 7.1_
+
+- [ ] 2. Implement database models and connection
+  - [ ] 2.1 Set up database connection (Firebase or MongoDB)
+    - Create database client initialization module
+    - Implement connection pooling and error handling
+    - Add connection retry logic with exponential backoff
+    - _Requirements: 5.3, 9.2_
+  
+  - [ ] 2.2 Define TypeScript interfaces for all data models
+    - Create User, ChatSession, Message, Note, Flashcard, Roadmap interfaces
+    - Add validation schemas using Zod or similar library
+    - _Requirements: 5.1, 5.3_
+  
+  - [ ]* 2.3 Write property test for database connection resilience
+    - **Property 19: Offline Data Caching**
+    - **Validates: Requirements 9.2**
+
+- [ ] 3. Implement authentication service
+  - [ ] 3.1 Create AuthenticationService with registration and login
+    - Implement password hashing using bcrypt
+    - Generate JWT tokens for session management
+    - Add email validation and password strength checks
+    - _Requirements: 5.1, 5.2_
+  
+  - [ ] 3.2 Add token validation and refresh logic
+    - Implement JWT verification middleware
+    - Create token refresh endpoint
+    - Add session cleanup on logout
+    - _Requirements: 5.2, 5.5_
+  
+  - [ ]* 3.3 Write property test for authentication
+    - **Property 11: User Registration and Account Creation**
+    - **Property 12: Authentication Success and Failure**
+    - **Validates: Requirements 5.1, 5.2**
+  
+  - [ ]* 3.4 Write property test for session cleanup
+    - **Property 14: Session Cleanup on Logout**
+    - **Validates: Requirements 5.5**
+  
+  - [ ]* 3.5 Write unit tests for authentication edge cases
+    - Test duplicate email registration
+    - Test invalid email formats
+    - Test weak passwords
+    - Test expired tokens
+    - _Requirements: 5.1, 5.2_
+
+- [ ] 4. Implement AI provider abstraction layer
+  - [ ] 4.1 Create AIProvider interface and implementations
+    - Define AIProvider interface with generateResponse, analyzeCode, generateStructuredContent methods
+    - Implement OpenAIProvider using OpenAI API
+    - Implement GeminiProvider using Google Gemini API
+    - Add configuration to switch between providers
+    - _Requirements: 7.1_
+  
+  - [ ] 4.2 Add retry logic and error handling for AI API calls
+    - Implement exponential backoff for rate limits
+    - Add timeout handling (5 second limit)
+    - Create error response formatting
+    - _Requirements: 7.2, 9.1, 10.1_
+  
+  - [ ] 4.3 Implement response caching mechanism
+    - Create cache key generation from prompts
+    - Add in-memory cache with TTL (Redis or Node-cache)
+    - Implement cache hit/miss logging
+    - _Requirements: 10.5_
+  
+  - [ ]* 4.4 Write property test for retry logic
+    - **Property 18: Network Error Retry Logic**
+    - **Validates: Requirements 9.1**
+  
+  - [ ]* 4.5 Write property test for response caching
+    - **Property 22: Response Caching for Repeated Queries**
+    - **Validates: Requirements 10.5**
+  
+  - [ ]* 4.6 Write unit test for AI API unavailable error
+    - Test error message display when API is down
+    - Test retry suggestion in error response
+    - _Requirements: 7.2_
+
+- [ ] 5. Checkpoint - Ensure core infrastructure tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 6. Implement ChatService
+  - [ ] 6.1 Create ChatService with message handling
+    - Implement sendMessage method with AI API integration
+    - Add conversation context management (maintain last N messages)
+    - Create chat session management (create, retrieve)
+    - Implement message persistence to database
+    - _Requirements: 1.1, 1.2, 1.4_
+  
+  - [ ] 6.2 Add message formatting and markdown support
+    - Format AI responses with proper markdown
+    - Add code block detection and formatting
+    - Implement response length limiting
+    - _Requirements: 1.3, 7.3_
+  
+  - [ ]* 6.3 Write property test for context preservation
+    - **Property 1: Conversation Context Preservation**
+    - **Validates: Requirements 1.2**
+  
+  - [ ]* 6.4 Write property test for markdown rendering
+    - **Property 4: Markdown Rendering in Responses**
+    - **Validates: Requirements 1.3, 7.3, 8.3**
+  
+  - [ ]* 6.5 Write property test for chat history display
+    - **Property 23: Chat History Display Completeness**
+    - **Validates: Requirements 1.4**
+  
+  - [ ]* 6.6 Write unit test for new session greeting
+    - Test that new sessions receive greeting message
+    - Test that greeting offers assistance options
+    - _Requirements: 1.5_
+
+- [ ] 7. Implement DebugService
+  - [ ] 7.1 Create DebugService with code analysis
+    - Implement analyzeCode method with AI integration
+    - Add language detection logic (detectLanguage method)
+    - Format debugging prompts for AI
+    - Parse AI responses into structured CodeIssue objects
+    - _Requirements: 2.1, 2.3, 2.5_
+  
+  - [ ] 7.2 Add support for multiple programming languages
+    - Create language-specific prompt templates
+    - Add syntax highlighting hints for responses
+    - _Requirements: 2.4_
+  
+  - [ ]* 7.3 Write property test for language detection
+    - **Property 2: Language Detection Accuracy**
+    - **Validates: Requirements 2.3**
+  
+  - [ ]* 7.4 Write property test for debug response completeness
+    - **Property 3: Debug Response Completeness**
+    - **Validates: Requirements 2.5**
+  
+  - [ ]* 7.5 Write unit test for supported languages
+    - Test Python, JavaScript, Java, C++ code analysis
+    - Verify each language is properly detected and analyzed
+    - _Requirements: 2.4_
+
+- [ ] 8. Implement NoteService
+  - [ ] 8.1 Create NoteService with note generation
+    - Implement generateNotes method using chat history
+    - Extract key concepts and format as structured markdown
+    - Add CRUD operations (save, get, update, delete)
+    - Implement filtering by date and topic
+    - _Requirements: 3.1, 3.2, 3.4, 3.5_
+  
+  - [ ]* 8.2 Write property test for notes format structure
+    - **Property 5: Notes Format Structure**
+    - **Validates: Requirements 3.2**
+  
+  - [ ]* 8.3 Write property test for notes persistence
+    - **Property 7: Data Persistence Round-Trip** (notes portion)
+    - **Validates: Requirements 3.4**
+  
+  - [ ]* 8.4 Write property test for notes organization
+    - **Property 8: Notes Organization and Retrieval**
+    - **Validates: Requirements 3.5**
+
+- [ ] 9. Implement FlashcardService
+  - [ ] 9.1 Create FlashcardService with flashcard generation
+    - Implement generateFlashcards method using session content
+    - Create question-answer pairs with AI
+    - Add CRUD operations for flashcards
+    - Implement review tracking (markReviewed method)
+    - _Requirements: 4.1, 4.2, 4.4, 4.5_
+  
+  - [ ]* 9.2 Write property test for minimum flashcard count
+    - **Property 9: Minimum Flashcard Generation**
+    - **Validates: Requirements 4.2**
+  
+  - [ ]* 9.3 Write property test for flashcard persistence
+    - **Property 7: Data Persistence Round-Trip** (flashcards portion)
+    - **Validates: Requirements 4.4**
+  
+  - [ ]* 9.4 Write property test for review tracking
+    - **Property 10: Flashcard Review Tracking**
+    - **Validates: Requirements 4.5**
+
+- [ ] 10. Implement RoadmapService
+  - [ ] 10.1 Create RoadmapService with roadmap generation
+    - Implement generateRoadmap method with goal and level inputs
+    - Structure roadmap into phases with milestones
+    - Add resource recommendations for each phase
+    - Implement milestone completion tracking
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
+  
+  - [ ]* 10.2 Write property test for roadmap structure
+    - **Property 15: Roadmap Structure Completeness**
+    - **Validates: Requirements 6.1, 6.2, 6.3**
+  
+  - [ ]* 10.3 Write property test for milestone tracking
+    - **Property 16: Milestone Completion and Progress Tracking**
+    - **Validates: Requirements 6.4, 6.5**
+
+- [ ] 11. Checkpoint - Ensure all backend services tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 12. Create backend API endpoints
+  - [ ] 12.1 Set up Express server with middleware
+    - Initialize Express app
+    - Add body-parser, cors, helmet middleware
+    - Set up error handling middleware
+    - Add request logging
+    - _Requirements: 9.4, 9.5_
+  
+  - [ ] 12.2 Create authentication endpoints
+    - POST /auth/register
+    - POST /auth/login
+    - POST /auth/logout
+    - POST /auth/refresh
+    - Add JWT authentication middleware
+    - _Requirements: 5.1, 5.2, 5.5_
+  
+  - [ ] 12.3 Create chat endpoints
+    - POST /chat/sessions
+    - GET /chat/sessions/:userId
+    - POST /chat/message
+    - GET /chat/history/:sessionId
+    - _Requirements: 1.1, 1.2, 1.4_
+  
+  - [ ] 12.4 Create debug endpoints
+    - POST /debug/analyze
+    - POST /debug/detect-language
+    - _Requirements: 2.1, 2.3_
+  
+  - [ ] 12.5 Create notes endpoints
+    - POST /notes/generate
+    - GET /notes/:userId
+    - PUT /notes/:noteId
+    - DELETE /notes/:noteId
+    - _Requirements: 3.1, 3.3, 3.4, 3.5_
+  
+  - [ ] 12.6 Create flashcards endpoints
+    - POST /flashcards/generate
+    - GET /flashcards/:userId
+    - PUT /flashcards/:flashcardId
+    - POST /flashcards/:flashcardId/review
+    - _Requirements: 4.1, 4.3, 4.4, 4.5_
+  
+  - [ ] 12.7 Create roadmap endpoints
+    - POST /roadmaps/generate
+    - GET /roadmaps/:userId
+    - PUT /roadmaps/:roadmapId/milestone/:milestoneId
+    - _Requirements: 6.1, 6.4_
+  
+  - [ ]* 12.8 Write property test for input validation
+    - **Property 20: Input Validation Error Messages**
+    - **Validates: Requirements 9.4**
+  
+  - [ ]* 12.9 Write property test for error logging
+    - **Property 21: Error Logging**
+    - **Validates: Requirements 9.5**
+
+- [ ] 13. Implement React frontend components
+  - [ ] 13.1 Set up React app with routing
+    - Initialize React app with TypeScript
+    - Set up React Router for navigation
+    - Create main App component with routes
+    - Add global styles and theme
+    - _Requirements: 8.4_
+  
+  - [ ] 13.2 Create AuthenticationForm component
+    - Build registration and login forms
+    - Add form validation
+    - Implement authentication state management (Context API or Redux)
+    - Handle authentication errors
+    - _Requirements: 5.1, 5.2_
+  
+  - [ ] 13.3 Create ChatInterface component
+    - Build message display with user/AI distinction
+    - Add message input field with submit button
+    - Implement typing indicators and loading states
+    - Add markdown rendering for messages
+    - Display conversation history
+    - _Requirements: 1.1, 1.3, 1.4, 8.1, 8.2, 8.3_
+  
+  - [ ] 13.4 Create NotesPanel component
+    - Display list of saved notes
+    - Add filtering by date and topic
+    - Implement note editing interface
+    - Add delete confirmation dialog
+    - _Requirements: 3.3, 3.5_
+  
+  - [ ] 13.5 Create FlashcardsPanel component
+    - Build flashcard deck display
+    - Implement flip animation for practice mode
+    - Add edit mode for flashcards
+    - Show review progress
+    - _Requirements: 4.3, 4.5_
+  
+  - [ ] 13.6 Create RoadmapView component
+    - Visualize roadmap as timeline or phases
+    - Display milestones with completion status
+    - Add milestone completion toggle
+    - Show resources for each phase
+    - _Requirements: 6.4, 6.5_
+  
+  - [ ] 13.7 Create Navigation component
+    - Build navigation menu with links to all sections
+    - Add user profile dropdown
+    - Implement logout functionality
+    - _Requirements: 8.4_
+  
+  - [ ]* 13.8 Write property test for loading indicators
+    - **Property 17: Loading State Indicators**
+    - **Validates: Requirements 8.2, 8.5**
+  
+  - [ ]* 13.9 Write unit test for navigation menu
+    - Test that all required navigation links are present
+    - Test navigation to each section
+    - _Requirements: 8.4_
+
+- [ ] 14. Implement frontend API client
+  - [ ] 14.1 Create API client service
+    - Build axios-based API client with base URL configuration
+    - Add request/response interceptors for authentication
+    - Implement automatic token refresh on 401 errors
+    - Add error handling and retry logic
+    - _Requirements: 9.1_
+  
+  - [ ] 14.2 Create API methods for all endpoints
+    - Implement methods for auth, chat, debug, notes, flashcards, roadmap endpoints
+    - Add TypeScript types for all request/response payloads
+    - _Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1_
+  
+  - [ ] 14.3 Implement local storage caching
+    - Cache user data in localStorage
+    - Sync cached data when connection restored
+    - Clear cache on logout
+    - _Requirements: 5.5, 9.2_
+  
+  - [ ]* 14.4 Write property test for cross-device data access
+    - **Property 13: Cross-Device Data Access**
+    - **Validates: Requirements 5.4**
+  
+  - [ ]* 14.5 Write property test for data persistence
+    - **Property 7: Data Persistence Round-Trip** (comprehensive test)
+    - **Validates: Requirements 5.3**
+
+- [ ] 15. Implement content editing functionality
+  - [ ] 15.1 Add edit capability to notes and flashcards
+    - Create inline editing components
+    - Add save/cancel buttons
+    - Implement optimistic UI updates
+    - Handle edit conflicts
+    - _Requirements: 3.3, 4.3_
+  
+  - [ ]* 15.2 Write property test for content editing
+    - **Property 6: Content Editing Capability**
+    - **Validates: Requirements 3.3, 4.3**
+
+- [ ] 16. Checkpoint - Ensure all frontend tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 17. Integration and end-to-end wiring
+  - [ ] 17.1 Connect frontend to backend API
+    - Configure API base URL for development and production
+    - Test all API integrations
+    - Add error boundary components for graceful error handling
+    - _Requirements: 9.3_
+  
+  - [ ] 17.2 Implement complete user flows
+    - Registration → Login → Chat → Generate Notes/Flashcards
+    - Debug code flow
+    - Roadmap generation and tracking flow
+    - _Requirements: 1.1, 2.1, 3.1, 4.1, 5.1, 6.1_
+  
+  - [ ]* 17.3 Write integration tests for API endpoints
+    - Test all endpoints with real database (test instance)
+    - Verify request/response contracts
+    - Test authentication flow end-to-end
+    - _Requirements: 5.1, 5.2_
+  
+  - [ ]* 17.4 Write end-to-end tests for critical flows
+    - Test user registration and login flow
+    - Test chat conversation with AI
+    - Test note generation from chat
+    - Test flashcard generation and practice
+    - _Requirements: 1.1, 3.1, 4.1, 5.1_
+
+- [ ] 18. Deployment preparation
+  - [ ] 18.1 Set up environment configuration
+    - Create production environment variables
+    - Configure database connection strings
+    - Set up AI API keys
+    - Add CORS configuration for production domain
+    - _Requirements: 7.1_
+  
+  - [ ] 18.2 Add deployment scripts and documentation
+    - Create build scripts for frontend and backend
+    - Add Docker configuration (optional)
+    - Write deployment documentation
+    - Set up CI/CD pipeline configuration
+    - _Requirements: N/A (deployment infrastructure)_
+
+- [ ] 19. Final checkpoint - Complete system verification
+  - Run all tests (unit, property, integration, e2e)
+  - Verify all 23 correctness properties are tested
+  - Test complete user flows manually
+  - Ensure all tests pass, ask the user if questions arise.
+
+## Notes
+
+- Tasks marked with `*` are optional test tasks and can be skipped for faster MVP
+- Each task references specific requirements for traceability
+- Property tests validate universal correctness properties with 100+ iterations
+- Unit tests validate specific examples and edge cases
+- Integration tests verify API contracts and database operations
+- E2E tests validate complete user workflows
+- The implementation follows a bottom-up approach: infrastructure → services → API → frontend → integration
